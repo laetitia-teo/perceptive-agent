@@ -60,10 +60,10 @@ env.reset()
 env.render('pyglet', view=view_mode)
 
 def step(action):
-    print('step {}/{}: {}'.format(
-        env.step_count + 1,
-        env.max_episode_steps,
-        env.actions(action).name))
+    # print('step {}/{}: {}'.format(
+    #     env.step_count + 1,
+    #     env.max_episode_steps,
+    #     env.actions(action).name))
 
     obs, reward, done, info = env.step(action)
 
@@ -108,7 +108,8 @@ def on_key_press(symbol, modifiers):
         step(env.actions.drop)
 
     elif symbol == key.ENTER:
-        step(env.actions.done)
+        action = env.action_space.sample()
+        step(action)
 
 @env.unwrapped.window.event
 def on_key_release(symbol, modifiers):
