@@ -31,24 +31,21 @@ def save_obs(obs, path, ep, idx):
 
 pathlib.Path(DATAPATH).mkdir(parents=True, exist_ok=True)
 
-mat = np.zeros((0, NSTEPS, env.n_boxes, env.n_actions))
+mat = np.zeros((NEPISODES, NSTEPS, env.n_boxes, env.n_actions))
 
 for ep in range(NEPISODES):
     print(f'Episode {ep}; rollout for {NSTEPS} random steps')
     obs = env.reset()
-    save_obs(obs, DATAPATH, 0, 0)
-
-    amat = np.zeros((0, env.n_boxes, env.n_actions))
+    save_obs(obs, DATAPATH, ep, 0)
 
     for i in range(NSTEPS):
         action = env.action_space.sample()
         action_mat = env.action_to_one_hot(action)
-        amat = np.concatenate((amat, action_mat))
         obs, _, _, _ = env.step(action)
 
         save_obs(obs, DATAPATH, ep, i+1)
 
-    mat = np.concatenate((mat, np.array([amat])))
+        mat[ep, i] = action_mat
 
 np.save(op.join(DATAPATH, 'action_matrix.npy'), mat)
 
