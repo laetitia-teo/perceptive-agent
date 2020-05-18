@@ -137,10 +137,10 @@ class ObjectEnv(MiniWorldEnv):
         """
         abs_action = action % self.n_actions
         box_idx = action // self.n_actions
-        action_mat = np.zeros((self.n_boxes, self.actions.move_back + 1))
+        action_mat = np.zeros((self.n_boxes, self.n_actions))
 
         action_mat[box_idx, abs_action] = 1.
-        return action_mat
+        return np.array([action_mat])
 
     def reset(self):
         super().reset()

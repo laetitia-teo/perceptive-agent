@@ -2,6 +2,7 @@
 import os.path as op
 import pathlib
 import gym
+import numpy as np
 
 from PIL import Image
 from envs import ObjectEnv
@@ -9,7 +10,7 @@ from envs import ObjectEnv
 # sys.path.append(..)
 
 NEPISODES = 5000
-NDATAPOINTS = 10
+NSTEPS = 10
 DATAPATH = op.join('..', 'data', 'dset1')
 
 envname = 'MiniWorld-ObjectEnv-v0'
@@ -30,15 +31,25 @@ def save_obs(obs, path, ep, idx):
 
 pathlib.Path(DATAPATH).mkdir(parents=True, exist_ok=True)
 
+mat = np.zeros((0, NSTEPS, env.n_boxes, env.n_actions))
 
 for ep in range(NEPISODES):
-    print(f'Episode {ep}; rollout for {NDATAPOINTS} random steps')
+    print(f'Episode {ep}; rollout for {NSTEPS} random steps')
     obs = env.reset()
     save_obs(obs, DATAPATH, 0, 0)
-    for i in range(NDATAPOINTS):
+
+    amat = np.zeros((0, env.n_boxes, env.n_actions))
+
+    for i in range(NSTEPS):
         action = env.action_space.sample()
+        action_mat = env.action_to_one_hot(action)
+        amat = np.concatenate((amat, action_mat))
         obs, _, _, _ = env.step(action)
 
         save_obs(obs, DATAPATH, ep, i+1)
+
+    mat = np.concatenate((mat, np.array([amat])))
+
+np.save(op.join(DATAPATH, 'action_matrix.npy'), mat)
 
 print('done')
