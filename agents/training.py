@@ -23,6 +23,7 @@ LR = 1e-4
 GAMMA = 1.
 K = 4
 ZDIM = 2
+ADIM = 4
 
 
 def train(cswm, dl, n_epochs):
@@ -40,7 +41,7 @@ def train(cswm, dl, n_epochs):
 oeb = ObjectEnvBuffer(DATAPATH)
 dl = DataLoader(oeb, batch_size=BSIZE, shuffle=True)
 
-cswm = C_SWM(K, ZDIM)
+cswm = C_SWM(K, ZDIM, ADIM)
 cswm = cswm.to(oeb.device)
 
 data = next(iter(dl))
@@ -49,6 +50,6 @@ if __name__ == "__main__":
     oeb = ObjectEnvBuffer(DATAPATH)
     dl = DataLoader(oeb, batch_size=BSIZE, shuffle=True)
 
-    cswm = C_SWM(K, ZDIM)
+    cswm = C_SWM(K, ZDIM, ADIM)
     cswm.to(oeb.device)
     train(C_SWM, dl, NEPOCHS)
