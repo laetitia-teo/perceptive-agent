@@ -76,21 +76,18 @@ class GNN_1(torch.nn.Module):
             [(2 * self.zdim + self.adim), 512, 512, self.zdim])
 
         # pre-compute edge indices
-        # TODO: remove self-edges
         I = torch.arange(self.K)
         ei = torch.stack(torch.meshgrid(I, I), -1).reshape((-1, 2))
+        # remove self-edges
+        ei = ei[ei[:, 0] != ei[:, 1]]
         self.register_buffer('ei', ei)
 
     def forward(self, x, a):
-        # TODO: check all this, 
 
-        print(x.shape)
-        print(a.shape)
-
-        # assert(x.shape[1] == self.K and x.shape[2] + a.shape[-1] == self.zdim)
-        
+        # compute edge indices for the batch
         bsize = x.shape[0]
-        ei = self.ei.expand(bsize, -1, -1)
+        B = torch.arange(bsize, device=x.device)[:, None, None]
+        ei = self.ei.expand(bsize, -1, -1) + (B * self.K)
 
         # edges are concat of all pairs of nodes
         rx = x.reshape(-1, self.zdim)
@@ -98,7 +95,6 @@ class GNN_1(torch.nn.Module):
         e = rx[rei]
         
         # apply edge model
-        # TODO: check this
         print(e.shape)
         e = self.edge_model(e.reshape(-1, 2*self.zdim))
         e = e.reshape(bsize, self.K, self.K - 1, self.zdim)
@@ -108,6 +104,7 @@ class GNN_1(torch.nn.Module):
         # apply node model
         x = torch.cat([x, a, e], -1)
         x = self.node_model(x)
+        print(x.shape)
         return x
 
 ## Complete model
@@ -116,26 +113,31 @@ class C_SWM(torch.nn.Module):
     """
     Contrastive Structured World Model.
     """
-    def __init__(self, K, zdim, adim):
+    def __init__(self, K, zdim, adim, gamma=1):
         super().__init__()
         self.K = K
         self.zdim = zdim
         # dimenson of the actions
         self.adim = adim
+        self.gamma = gamma
 
         self.perception = PerceptionSimple(self.K, self.zdim)
         self.transition = GNN_1(self.zdim, self.adim, self.zdim, self.K)
 
     def forward(self, data):
         # forward pass returns hinge loss
-        # TODO: adapt for multi object
         st, st_, stp, a = data
         
         zt = self.perception(st)
-        zt_ = self.perception(st_)
-        ztp = self.perception(stp)
+        ztnext = self.perception(st_)
+        ztpert = self.perception(stp)
+        ztnextpred = zt + self.transition(zt, a)
 
-        d1 = F.mse_loss(zt + self.transition(zt, a), zt_)
-        d2 = - F.relu(T.mse_loss(ztp, zt_) - GAMMA)
+        print(zt.shape)
 
-        return d1 + d2
+        H = ((ztnextpred - ztnext)**2).sum((1, 2)) / self.K
+        H_ = ((ztnext - ztpert)**2).sum((1, 2)) / self.K
+
+        loss = H + F.relu(self.gamma - H_)
+
+        return loss.sum()
